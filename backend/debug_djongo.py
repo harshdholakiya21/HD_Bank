@@ -10,14 +10,4 @@ try:
 except Exception:
     print("DEBUG: Failed to import djongo!")
     traceback.print_exc()
-
-print("DEBUG: Attempting to setup Django...")
-try:
-    import os
-    import django
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'banking_system.settings')
-    django.setup()
-    print("DEBUG: Django setup successful!")
-except Exception:
-    print("DEBUG: Django setup failed!")
-    traceback.print_exc()
+    sys.exit(1) # Fail the build so we see this error

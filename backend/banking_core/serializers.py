@@ -57,11 +57,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 class ReferenceIDSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     class Meta:
         model = ReferenceID
         fields = '__all__'
 
 class AccountSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
     user = UserSerializer(read_only=True)
     class Meta:
         model = Account

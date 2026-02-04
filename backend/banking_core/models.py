@@ -16,6 +16,7 @@ class User(AbstractUser):
         return f"{self.username} - {self.role}"
 
 class ReferenceID(models.Model):
+    id = djongo_models.ObjectIdField(primary_key=True)
     code = models.CharField(max_length=50, unique=True)
     is_used = models.BooleanField(default=False)
     used_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='used_reference')
@@ -25,6 +26,7 @@ class ReferenceID(models.Model):
         return self.code
 
 class Account(models.Model):
+    id = djongo_models.ObjectIdField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='account')
     account_number = models.CharField(max_length=20, unique=True)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)

@@ -7,3 +7,4 @@ whitenoise
 gunicorn
 python-dotenv
 sqlparse==0.2.4
+dnspython

@@ -1,0 +1,93 @@
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+from .models import ReferenceID, Account
+
+User = get_user_model()
+
+class UserSerializer(serializers.ModelSerializer):
+    account_number = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'phone', 'role', 'account_number']
+
+    def get_account_number(self, obj):
+        if hasattr(obj, 'account'):
+            return obj.account.account_number
+        return None
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    ref_id = serializers.CharField(required=False, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'phone', 'password', 'role', 'ref_id']
+
+    def validate(self, data):
+        role = data.get('role', 'CLIENT')
+        if role == 'EMPLOYEE':
+            ref_id = data.get('ref_id')
+            if not ref_id:
+                raise serializers.ValidationError({"ref_id": "Reference ID is required for Employees."})
+            try:
+                ref = ReferenceID.objects.get(code=ref_id)
+                if ref.is_used:
+                    raise serializers.ValidationError({"ref_id": "Reference ID already used."})
+            except ReferenceID.DoesNotExist:
+                raise serializers.ValidationError({"ref_id": "Invalid or used Reference ID."})
+            data['ref_obj'] = ref
+        return data
+
+    def create(self, validated_data):
+        ref_obj = validated_data.pop('ref_obj', None)
+        ref_id = validated_data.pop('ref_id', None)
+        password = validated_data.pop('password')
+        
+        user = User(**validated_data)
+        user.set_password(password)
+        user.is_active = False # Require OTP
+        user.save()
+
+        if ref_obj:
+            ref_obj.is_used = True
+            ref_obj.used_by = user
+            ref_obj.save()
+        
+        return user
+
+class ReferenceIDSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReferenceID
+        fields = '__all__'
+
+class AccountSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    class Meta:
+        model = Account
+        fields = '__all__'
+
+class CreateClientSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    initial_balance = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'phone', 'password', 'initial_balance']
+
+    def create(self, validated_data):
+        initial_balance = validated_data.pop('initial_balance', 0)
+        password = validated_data.pop('password')
+        
+        user = User(**validated_data)
+        user.set_password(password)
+        user.role = 'CLIENT'
+        user.is_active = True # Manager created, no OTP
+        user.save()
+
+        # Generate Account Number (mock)
+        import random
+        acc_num = f"HD{random.randint(10000000, 99999999)}"
+        Account.objects.create(user=user, account_number=acc_num, balance=initial_balance)
+        
+        return user

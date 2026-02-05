@@ -24,3 +24,12 @@ staticfiles/
 # IDEs
 .vscode/
 .idea/
+
+# Backend Utility Scripts
+backend/create_manager*.py
+backend/debug_*.py
+backend/verify_*.py
+backend/reproduce_*.py
+backend/cleanup_duplicates.py
+backend/update_role.py
+backend/wipe_all_mongo.py

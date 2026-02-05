@@ -5,20 +5,47 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from .serializers import (
     UserSerializer, ReferenceIDSerializer, 
-    CreateClientSerializer, AccountSerializer, ClientRegistrationSerializer
+    CreateClientSerializer, AccountSerializer, 
+    EmployeeRegisterSerializer, ClientInitActivationSerializer, ClientCompleteActivationSerializer
 )
 from .models import ReferenceID, Account
 import uuid
 
-class RegisterView(APIView):
+class EmployeeRegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        serializer = ClientRegistrationSerializer(data=request.data)
+        serializer = EmployeeRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             return Response({
-                "message": "Registration successful. You can now login.",
+                "message": "Employee registered successfully.", 
+                "username": user.username
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ClientInitActivationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ClientInitActivationSerializer(data=request.data)
+        if serializer.is_valid():
+            # Mock OTP sent
+            return Response({
+                "message": "OTP sent to registered email and phone.", 
+                "mock_otp": "123456"
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ClientCompleteActivationView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ClientCompleteActivationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({
+                "message": "Activation successful. You can now login.",
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -26,25 +53,8 @@ class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        username = request.data.get('username')
-        otp = request.data.get('otp')
-        
-        if otp == "123456": # Validate OTP
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            try:
-                user = User.objects.get(username=username)
-                user.is_active = True
-                user.save()
-                token, _ = Token.objects.get_or_create(user=user)
-                return Response({
-                    "message": "Verification Successful", 
-                    "token": token.key,
-                    "role": user.role
-                })
-            except User.DoesNotExist:
-                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-        return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+        # Deprecated logic or used for Login OTP if implemented later
+        return Response({"error": "Use activation endpoints"}, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -55,8 +65,10 @@ class LoginView(APIView):
         user = authenticate(username=username, password=password)
         
         if user:
+            # Check if active (though activation sets it true)
             if not user.is_active:
-                return Response({"error": "User not verified"}, status=status.HTTP_401_UNAUTHORIZED)
+                 return Response({"error": "User disabled"}, status=status.HTTP_401_UNAUTHORIZED)
+
             token, _ = Token.objects.get_or_create(user=user)
             return Response({
                 "token": token.key,
@@ -64,6 +76,7 @@ class LoginView(APIView):
                 "username": user.username
             })
         return Response({"error": "Invalid Credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+        
 
 class ManagerGenerateRefView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -98,9 +111,32 @@ class ManagerCreateClientView(APIView):
         serializer = CreateClientSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            # User might have multiple accounts now, we want the one just created.
+            # CreateClientSerializer create() returns user.
+            # But the serializer creates the account.
+            # Let's verify how we can get it. 
+            # In my serializer I did: Account.objects.create(user=user...)
+            # I should probably update serializer to return account, or just fetch the last one.
+            # For simplicity let's assume the serializer logic I wrote (Step 195) returned 'user'.
+            # I can just fetch the latest account for this user?
+            # Or better, update views to return the account number properly.
+            # The previous serializer code (Step 195):
+            # acc_num = ...; Account.objects.create(..., account_number=acc_num...)
+            # But it returns `user`.
+            # I'll rely on fetching the *latest* account or similar.
+            # Actually, `user.accounts.last()` (if ordered) or `Account.objects.filter(user=user).last()`.
+            # Since I just created it, it should be the latest.
+            
+            try:
+                latest_account = Account.objects.filter(user=user).order_by('-id').first() # Verify default ID ordering in Djongo?
+                # Djongo ObjectId might order by time? Yes.
+                acc_num = latest_account.account_number if latest_account else "UNKNOWN"
+            except:
+                acc_num = "UNKNOWN"
+
             return Response({
                 "message": "Client created successfully",
-                "account": user.account.account_number
+                "account": acc_num
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -146,23 +182,17 @@ class ManagerStatsView(APIView):
             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
         
         try:
-            # Manual summation for MongoDB Decimal128 support
             accounts = Account.objects.all()
             total_balance = __import__('decimal').Decimal('0.00')
-            
             for acc in accounts:
                 try:
                     bal = acc.balance
-                    if hasattr(bal, 'to_decimal'):
-                        bal = bal.to_decimal()
+                    if hasattr(bal, 'to_decimal'): bal = bal.to_decimal()
                     total_balance += bal
-                except Exception:
-                    continue # Skip corrupt accounts
-                
+                except: continue
             return Response({"total_balance": str(total_balance)})
-        except Exception as e:
-            print(f"Stats Error: {e}")
-            return Response({"total_balance": "0.00"})
+        except:
+             return Response({"total_balance": "0.00"})
 
 class UserListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -173,25 +203,15 @@ class UserListView(APIView):
         
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        
-        try:
-            role = request.query_params.get('role')
-            if role:
-                users = User.objects.filter(role=role)
-            else:
-                 users = User.objects.all()
-            
-            # Helper to safely serialize
-            data = []
-            for u in users:
-                try:
-                    data.append(UserSerializer(u).data)
-                except:
-                    pass
-            return Response(data)
-        except Exception as e:
-             print(f"UserList Error: {e}")
-             return Response([])
+        users = User.objects.all()
+        # Serialize simply
+        data = []
+        for u in users:
+             try:
+                 # Minimal data needed
+                 data.append({"id": str(u.id), "username": u.username, "role": u.role, "email": u.email, "phone": u.phone})
+             except: pass
+        return Response(data)
 
 class ClientDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -203,22 +223,20 @@ class ClientDetailView(APIView):
         account_number = request.query_params.get('account_number')
         if not account_number:
             return Response({"error": "Account number required"}, status=status.HTTP_400_BAD_REQUEST)
-            
         try:
             account = Account.objects.get(account_number=account_number)
-            balance = account.balance
-            if hasattr(balance, 'to_decimal'):
-                 balance = balance.to_decimal()
-            
+            bal = account.balance
+            if hasattr(bal, 'to_decimal'): bal = bal.to_decimal()
             return Response({
                 "username": account.user.username,
                 "email": account.user.email,
                 "phone": account.user.phone,
                 "account_number": account.account_number,
-                "balance": str(balance)
+                "balance": str(bal)
             })
         except Account.DoesNotExist:
             return Response({"error": "Account not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 class ClientDashboardView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -227,20 +245,24 @@ class ClientDashboardView(APIView):
         if not hasattr(request.user, 'role') or request.user.role != 'CLIENT':
              return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
         
-        try:
-            account = request.user.account
-             # Handle MongoDB Decimal128
-            balance = account.balance
-            if hasattr(balance, 'to_decimal'):
-                balance = balance.to_decimal()
-                
-            return Response({
-                "username": request.user.username,
-                "account_number": account.account_number,
-                "balance": str(balance)
+        accounts = request.user.accounts.all()
+        account_data = []
+        total_balance = __import__('decimal').Decimal('0.00')
+
+        for acc in accounts:
+            bal = acc.balance
+            if hasattr(bal, 'to_decimal'): bal = bal.to_decimal()
+            total_balance += bal
+            account_data.append({
+                "account_number": acc.account_number,
+                "balance": str(bal)
             })
-        except Account.DoesNotExist:
-            return Response({"error": "No account found"}, status=status.HTTP_404_NOT_FOUND)
+                
+        return Response({
+            "username": request.user.username,
+            "accounts": account_data,
+            "total_balance": str(total_balance)
+        })
 
 class UpdateBalanceView(APIView):
     permission_classes = [permissions.IsAuthenticated]

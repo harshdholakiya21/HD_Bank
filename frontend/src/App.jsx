@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import EmployeeRegister from './pages/EmployeeRegister';
 import ClientDashboard from './pages/ClientDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 
@@ -24,6 +25,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/employee-register" element={<EmployeeRegister />} /> {/* Added this route */}
 
             <Route
               path="/client/dashboard"

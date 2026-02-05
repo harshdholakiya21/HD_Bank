@@ -30,7 +30,7 @@ const ManagerDashboard = () => {
 
     // Create Client State
     const [createClientForm, setCreateClientForm] = useState({
-        username: '', email: '', phone: '', password: '', initial_balance: ''
+        username: '', email: '', phone: '', initial_balance: ''
     });
     const [createSuccess, setCreateSuccess] = useState('');
     const [createError, setCreateError] = useState('');
@@ -84,7 +84,7 @@ const ManagerDashboard = () => {
         try {
             const res = await api.post('manager/create-client/', createClientForm);
             setCreateSuccess(`Client created! Account: ${res.data.account}`);
-            setCreateClientForm({ username: '', email: '', phone: '', password: '', initial_balance: '' });
+            setCreateClientForm({ username: '', email: '', phone: '', initial_balance: '' });
         } catch (err) {
             setCreateError('Failed to create client. ' + JSON.stringify(err.response?.data || {}));
         }
@@ -471,12 +471,6 @@ const ManagerDashboard = () => {
                                         <input type="number" className="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
                                             value={createClientForm.initial_balance} onChange={e => setCreateClientForm({ ...createClientForm, initial_balance: e.target.value })} />
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                    <input type="password" required className="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={createClientForm.password} onChange={e => setCreateClientForm({ ...createClientForm, password: e.target.value })} />
                                 </div>
 
                                 <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-md mt-4">

@@ -4,8 +4,8 @@ from rest_framework import status, permissions
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from .serializers import (
-    RegisterSerializer, UserSerializer, ReferenceIDSerializer, 
-    CreateClientSerializer, AccountSerializer
+    UserSerializer, ReferenceIDSerializer, 
+    CreateClientSerializer, AccountSerializer, ClientRegistrationSerializer
 )
 from .models import ReferenceID, Account
 import uuid
@@ -14,16 +14,12 @@ class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        serializer = ClientRegistrationSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            # Generate Mock OTP
-            otp = "123456" 
             return Response({
-                "message": "User registered successfully. OTP sent.", 
-                "username": user.username,
-                "mock_otp": otp
-            }, status=status.HTTP_201_CREATED)
+                "message": "Registration successful. You can now login.",
+            }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyOTPView(APIView):

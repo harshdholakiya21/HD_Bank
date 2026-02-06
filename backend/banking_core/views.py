@@ -27,6 +27,12 @@ class HealthCheckView(APIView):
         except Exception as e:
             return Response({"status": "error", "db": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class SafeHealthCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({"status": "alive", "message": "Server is running"}, status=status.HTTP_200_OK)
+
 class EmployeeRegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 

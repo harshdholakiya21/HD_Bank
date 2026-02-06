@@ -10,6 +10,22 @@ from .serializers import (
 )
 from .models import ReferenceID, Account
 import uuid
+from django.db import connections
+from django.db.utils import OperationalError
+
+class HealthCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        try:
+            # Ensure connection
+            db_conn = connections['default']
+            db_conn.cursor()
+            return Response({"status": "ok", "db": "connected"}, status=status.HTTP_200_OK)
+        except OperationalError:
+            return Response({"status": "error", "db": "disconnected"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except Exception as e:
+            return Response({"status": "error", "db": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class EmployeeRegisterView(APIView):
     permission_classes = [permissions.AllowAny]

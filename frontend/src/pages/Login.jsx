@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Lock, User as UserIcon } from 'lucide-react';
@@ -70,6 +70,10 @@ const Login = () => {
                         </button>
                     </div>
                 </form>
+            </div>
+            <div className="text-center mt-4 text-sm text-gray-600">
+                <p>New to HD Bank? <Link to="/register" className="text-blue-600 hover:underline">Open an Account</Link></p>
+                <p className="mt-2 text-xs">Bank Staff? <Link to="/employee-register" className="text-gray-500 hover:text-blue-600">Employee Registration</Link></p>
             </div>
         </div>
     );

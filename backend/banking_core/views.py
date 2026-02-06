@@ -33,6 +33,19 @@ class SafeHealthCheckView(APIView):
     def get(self, request):
         return Response({"status": "alive", "message": "Server is running"}, status=status.HTTP_200_OK)
 
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = CreateClientSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({
+                "message": "Client registered successfully", 
+                "username": user.username
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class EmployeeRegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 

@@ -3,13 +3,15 @@ from .views import (
     RegisterView, VerifyOTPView, LoginView, 
     ManagerGenerateRefView, ManagerCreateClientView, ClientDashboardView,
     UpdateBalanceView, ManagerListRefView, UpdateClientDetailsView,
-    ManagerStatsView, UserListView, ClientDetailView, HealthCheckView, SafeHealthCheckView
+    ManagerStatsView, UserListView, ClientDetailView, HealthCheckView, SafeHealthCheckView,
+    EmployeeVerifyOTPView
 )
 
 urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('safe-health/', SafeHealthCheckView.as_view(), name='safe-health-check'),
     path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/employee-verify/', EmployeeVerifyOTPView.as_view(), name='employee-verify'),
     path('auth/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('auth/login/', LoginView.as_view(), name='login'),
     

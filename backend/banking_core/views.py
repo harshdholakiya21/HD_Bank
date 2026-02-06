@@ -40,9 +40,19 @@ class RegisterView(APIView):
         serializer = CreateClientSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            # Fetch Account Number for Activation
+            try:
+                # Assuming latest account or checking related logic. 
+                # Since we just created it, filtering by user is safe.
+                account = Account.objects.filter(user=user).first()
+                acc_num = account.account_number if account else "UNKNOWN"
+            except:
+                acc_num = "UNKNOWN"
+
             return Response({
                 "message": "Client registered successfully", 
-                "username": user.username
+                "username": user.username,
+                "account_number": acc_num
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -53,11 +63,41 @@ class EmployeeRegisterView(APIView):
         serializer = EmployeeRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            otp_channel = serializer.validated_data.get('otp_channel', 'email')
+            # Mock sending OTP
             return Response({
-                "message": "Employee registered successfully.", 
-                "username": user.username
+                "message": f"Employee registered. OTP sent to {otp_channel}.", 
+                "username": user.username,
+                "mock_otp": "123456"
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EmployeeVerifyOTPView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        otp = request.data.get('otp')
+        
+        if not username or not otp:
+            return Response({"error": "Username and OTP required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if otp != "123456":
+             return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+             
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        try:
+            user = User.objects.get(username=username)
+            if user.role != 'EMPLOYEE':
+                 return Response({"error": "Not an employee account"}, status=status.HTTP_400_BAD_REQUEST)
+                 
+            user.is_active = True
+            user.save()
+            return Response({"message": "Verification successful. You can now login."}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 class ClientInitActivationView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -238,7 +278,13 @@ class UserListView(APIView):
         
         from django.contrib.auth import get_user_model
         User = get_user_model()
-        users = User.objects.all()
+        
+        role_filter = request.query_params.get('role')
+        if role_filter:
+            users = User.objects.filter(role=role_filter.upper())
+        else:
+            users = User.objects.all()
+            
         # Serialize simply
         data = []
         for u in users:

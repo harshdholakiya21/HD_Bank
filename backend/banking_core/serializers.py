@@ -63,13 +63,18 @@ class CreateClientSerializer(serializers.ModelSerializer):
 
 class EmployeeRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
     ref_id = serializers.CharField(write_only=True)
+    otp_channel = serializers.ChoiceField(choices=['email', 'phone'], default='email', write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone', 'password', 'ref_id']
+        fields = ['username', 'email', 'phone', 'password', 'confirm_password', 'ref_id', 'otp_channel']
 
     def validate(self, data):
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError({"password": "Passwords do not match."})
+            
         ref_id = data.get('ref_id')
         try:
             ref = ReferenceID.objects.get(code=ref_id)
@@ -84,11 +89,13 @@ class EmployeeRegisterSerializer(serializers.ModelSerializer):
         ref_obj = validated_data.pop('ref_obj')
         ref_id = validated_data.pop('ref_id')
         password = validated_data.pop('password')
+        validated_data.pop('confirm_password') # remove confirm
+        otp_channel = validated_data.pop('otp_channel') # unused here but passed to view if needed, or just consumed
         
         user = User(**validated_data)
         user.set_password(password)
         user.role = 'EMPLOYEE'
-        user.is_active = True
+        user.is_active = False # Inactive until OTP verified
         user.save()
 
         ref_obj.is_used = True

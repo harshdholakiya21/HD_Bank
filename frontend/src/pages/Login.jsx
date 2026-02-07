@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
-import { Lock, User as UserIcon } from 'lucide-react';
+import { Lock, User as UserIcon, LogIn, AlertCircle } from 'lucide-react';
 
 const Login = () => {
     const [formData, setFormData] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
         try {
             const res = await api.post('auth/login/', formData);
             login(res.data);
@@ -20,41 +22,59 @@ const Login = () => {
             else if (res.data.role === 'CLIENT') navigate('/client/dashboard');
             else navigate('/');
         } catch (err) {
-            setError('Invalid credentials or user not active.');
+            setError(err.response?.data?.error || 'Invalid credentials or user not active.');
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-[calc(100vh-80px)] flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full bg-white p-10 rounded-2xl shadow-xl space-y-8">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Sign in to HD Bank</h2>
+        <div className="min-h-[calc(100vh-80px)] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+                <div className="text-center mb-8">
+                    <div className="bg-blue-100 p-3 rounded-full w-fit mx-auto mb-4">
+                        <LogIn className="text-blue-600 h-8 w-8" />
+                    </div>
+                    <h2 className="text-3xl font-extrabold text-gray-900">Welcome Back</h2>
+                    <p className="mt-2 text-sm text-gray-600">Sign in to access your HD Bank account</p>
                 </div>
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    {error && <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
-                    <div className="rounded-md shadow-sm -space-y-px">
+
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    {error && (
+                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex gap-2 items-center">
+                            <AlertCircle size={18} className="shrink-0" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
                         <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                <UserIcon size={20} />
-                            </span>
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <UserIcon size={18} />
+                            </div>
                             <input
                                 type="text"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                                placeholder="Username"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                                placeholder="Enter your username"
                                 value={formData.username}
                                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                         <div className="relative">
-                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                                <Lock size={20} />
-                            </span>
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                <Lock size={18} />
+                            </div>
                             <input
                                 type="password"
                                 required
-                                className="appearance-none rounded-none relative block w-full px-10 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                                placeholder="Password"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                                placeholder="Enter your password"
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                             />
@@ -64,16 +84,30 @@ const Login = () => {
                     <div>
                         <button
                             type="submit"
-                            className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 ease-in-out"
+                            disabled={loading}
+                            className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                            Sign in
+                            {loading ? 'Signing in...' : 'Sign in'}
                         </button>
                     </div>
                 </form>
-            </div>
-            <div className="text-center mt-4 text-sm text-gray-600">
-                <p>New to HD Bank? <Link to="/register" className="text-blue-600 hover:underline">Open an Account</Link></p>
-                <p className="mt-2 text-xs">Bank Staff? <Link to="/employee-register" className="text-gray-500 hover:text-blue-600">Employee Registration</Link></p>
+
+                <div className="mt-6 border-t border-gray-100 pt-6">
+                    <div className="text-center text-sm text-gray-600 space-y-2">
+                        <p>
+                            Don't have online access?{' '}
+                            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 hover:underline">
+                                Activate Account
+                            </Link>
+                        </p>
+                        <p className="text-xs text-gray-400">
+                            Bank Staff?{' '}
+                            <Link to="/employee-register" className="hover:text-blue-600 hover:underline">
+                                Employee Registration
+                            </Link>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
     );

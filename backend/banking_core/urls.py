@@ -4,13 +4,16 @@ from .views import (
     ManagerGenerateRefView, ManagerCreateClientView, ClientDashboardView,
     UpdateBalanceView, ManagerListRefView, UpdateClientDetailsView,
     ManagerStatsView, UserListView, ClientDetailView, HealthCheckView, SafeHealthCheckView,
-    EmployeeVerifyOTPView
+    EmployeeVerifyOTPView, ClientInitActivationView, ClientCompleteActivationView, EmployeeRegisterView
 )
 
 urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('safe-health/', SafeHealthCheckView.as_view(), name='safe-health-check'),
-    path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/register/', RegisterView.as_view(), name='register'), # Keep for reference or legacy
+    path('auth/client-init-activation/', ClientInitActivationView.as_view(), name='client-init-activation'),
+    path('auth/client-complete-activation/', ClientCompleteActivationView.as_view(), name='client-complete-activation'),
+    path('auth/employee-register/', EmployeeRegisterView.as_view(), name='employee-register'),
     path('auth/employee-verify/', EmployeeVerifyOTPView.as_view(), name='employee-verify'),
     path('auth/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('auth/login/', LoginView.as_view(), name='login'),
